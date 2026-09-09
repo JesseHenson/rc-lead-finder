@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RC Pressure Washing — Daily Leads</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #14181f; --muted: #667085;
+    --line: #e4e7ec; --accent: #0b6bcb; --accent-ink: #ffffff;
+    --warm: #b54708; --warm-bg: #fef6ee; --good: #067647; --good-bg: #ecfdf3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1116; --card: #161b22; --ink: #e6edf3; --muted: #8b949e;
+      --line: #262c36; --accent: #4493f8; --accent-ink: #06121f;
+      --warm: #f0a868; --warm-bg: #2a1c0e; --good: #56d364; --good-bg: #0d2818;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 16px 14px 64px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  h1 { font-size: 19px; margin: 0; letter-spacing: -0.01em; }
+  .stamp { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .mode { border: 1px solid var(--line); border-radius: 20px; padding: 1px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+  @media (max-width: 560px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; }
+  .stat b { display: block; font-size: 26px; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .stat span { display: block; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 26px 0 10px; font-weight: 600; }
+  h2 em { font-style: normal; color: var(--ink); text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 13px; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 13px 14px; margin-bottom: 10px; }
+  .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); margin-bottom: 7px; }
+  .pill { border: 1px solid var(--line); border-radius: 20px; padding: 1px 8px; font-size: 11.5px; }
+  .pill.hot { background: var(--warm-bg); color: var(--warm); border-color: transparent; font-weight: 600; }
+  .pill.src { background: var(--bg); }
+  .pill.svc { background: var(--bg); font-weight: 600; }
+  .pill.second { background: var(--good-bg); color: var(--good); border-color: transparent; }
+  .next { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .next b { color: var(--ink); }
+  .quote { margin: 0 0 10px; font-size: 14.5px; }
+  .draft {
+    background: var(--bg); border: 1px dashed var(--line); border-radius: 8px;
+    padding: 9px 11px; font-size: 13.5px; color: var(--ink); margin-bottom: 10px;
+  }
+  .draft small { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  button, a.btn {
+    font: inherit; font-size: 13.5px; padding: 7px 13px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink); text-decoration: none;
+  }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
+  button.done { background: var(--good-bg); color: var(--good); border-color: transparent; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 0 10px 7px 0; font-weight: 600; white-space: nowrap; }
+  td { padding: 9px 10px 9px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  td.who b { display: block; }
+  td.who span { color: var(--muted); font-size: 12.5px; }
+  .empty { color: var(--muted); font-size: 13.5px; padding: 18px 0; text-align: center; }
+  footer { margin-top: 30px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>RC Pressure Washing — Daily Leads</h1>
+    <div class="stamp"><span id="mode" class="mode"></span> <span id="stamp"></span></div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <h2>Today's asks <em id="asks-note"></em></h2>
+  <div id="asks"></div>
+
+  <h2>Commercial prospects <em id="comm-note"></em></h2>
+  <div id="commercial"></div>
+
+  <h2>This week</h2>
+  <div class="card" id="week"></div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+// Two modes, one file.
+//   file://  — DATA is inlined by render.js at write time. A snapshot.
+//   http://  — served by src/dashboard/serve.js, which leaves the marker alone.
+//              The page then fetches /data.json and refreshes itself, which a
+//              file:// page is not allowed to do.
+let DATA = /*__DATA__*/{"generated_at":"","stats":[],"asks":[],"commercial":[],"week":{},"footer":""};
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $ = id => document.getElementById(id);
+
+function render(d) {
+  DATA = d;
+  $("stamp").textContent = d.generated_at ? "as of " + d.generated_at : "";
+  $("stats").innerHTML = (d.stats || []).map(s =>
+    `<div class="stat"><b>${esc(s.value)}</b><span>${esc(s.label)}</span></div>`).join("");
+
+  const asks = d.asks || [];
+  $("asks-note").textContent = asks.length
+    ? `${asks.length} ready, cap ${d.cap ?? 10}/day`
+      + (d.second_touch ? ` · ${d.second_touch} second touch` : "")
+    : "";
+  $("asks").innerHTML = asks.length ? asks.map((a, i) => `
+    <div class="card">
+      <div class="meta">
+        <span class="pill src">${esc(a.source)}</span>
+        ${a.service ? `<span class="pill svc">${esc(a.service)}</span>` : ""}
+        <span class="pill">${esc(a.area)}</span>
+        <span>${esc(a.age)}</span>
+        ${a.who ? `<span>· ${esc(a.who)}</span>` : ""}
+        ${a.hot ? `<span class="pill hot">${esc(a.hot)}</span>` : ""}
+        ${a.second_touch ? `<span class="pill second">2nd touch</span>` : ""}
+      </div>
+      <p class="quote">${esc(a.excerpt)}</p>
+      <div class="draft"><small>Drafted comment</small>${esc(a.draft)}</div>
+      ${a.follow_up ? `<div class="next"><b>Next:</b> ${esc(a.follow_up)}</div>` : ""}
+      <div class="row">
+        <button class="primary" data-copy="${i}">Copy comment</button>
+        <a class="btn" href="${esc(a.url)}" target="_blank" rel="noopener">Open post</a>
+      </div>
+    </div>`).join("") : `<div class="empty">Nothing new found today.</div>`;
+
+  const comm = d.commercial || [];
+  $("comm-note").textContent = comm.length ? `${comm.length} in ${esc(d.commercial_area ?? "target area")}` : "";
+  $("commercial").innerHTML = comm.length ? `<div class="card scroll"><table>
+    <thead><tr><th>Business</th><th>Likely needs</th><th>Decision maker</th><th>Email</th><th></th></tr></thead>
+    <tbody>${comm.map((c, i) => `<tr>
+      <td class="who"><b>${esc(c.name)}</b><span>${esc(c.address)}</span></td>
+      <td class="who"><b>${esc(c.services)}</b><span>${esc(c.building)}</span></td>
+      <td class="who"><b>${esc(c.contact)}</b><span>${esc(c.title)}</span></td>
+      <td>${esc(c.email)}</td>
+      <td><button data-mail="${i}">Copy email</button></td>
+    </tr>`).join("")}</tbody></table></div>`
+    : `<div class="empty">No commercial prospects yet — run a scrape.</div>`;
+
+  $("week").innerHTML = Object.entries(d.week || {}).map(([k, v]) =>
+    `<div class="meta" style="margin:0 0 4px"><b style="color:var(--ink);font-variant-numeric:tabular-nums">${esc(v)}</b> ${esc(k)}</div>`).join("");
+
+  $("foot").textContent = d.footer || "";
+}
+
+document.addEventListener("click", e => {
+  const btn = e.target.closest("[data-copy],[data-mail]");
+  if (!btn) return;
+  const text = btn.hasAttribute("data-copy")
+    ? DATA.asks[+btn.dataset.copy].draft
+    : DATA.commercial[+btn.dataset.mail].draft_email;
+  navigator.clipboard.writeText(text).then(() => {
+    const was = btn.textContent;
+    btn.textContent = "Copied";
+    btn.classList.add("done");
+    setTimeout(() => { btn.textContent = was; btn.classList.remove("done"); }, 1600);
+  });
+});
+
+// Served over http: poll. Opened as a file: render the snapshot and stop.
+if (location.protocol === "http:" || location.protocol === "https:") {
+  const tick = async () => {
+    try {
+      const r = await fetch("data.json", { cache: "no-store" });
+      if (r.ok) { render(await r.json()); $("mode").textContent = "live"; }
+    } catch { $("mode").textContent = "offline"; }
+  };
+  tick();
+  setInterval(tick, 15000);
+} else {
+  render(DATA);
+  $("mode").textContent = "snapshot";
+}
+</script>
+</body>
+</html>

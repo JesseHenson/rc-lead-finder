@@ -1,0 +1,112 @@
+{
+  "manifest_version": "0.2",
+  "name": "rc-lead-finder",
+  "display_name": "RC Pressure Washing \u2014 Lead Finder",
+  "version": "0.5.0",
+  "description": "Finds people asking for pressure washing near you and drafts what to say. You post it.",
+  "long_description": "Two tracks. Residential: searches public Facebook posts in your service area for people asking for pressure washing, filters out competitors advertising and posts you've already been mentioned in, scores what's left, and drafts a short comment tagging your page. Commercial: pulls freestanding small businesses in the area, drops corporate and big-footprint locations, finds a contact email, and drafts a first-touch note. Nothing is posted or emailed automatically \u2014 you copy a draft and send it yourself, which is both safer for your accounts and the reason it doesn't read as a bot. Searches run in the background rather than holding a tool call open, so a slow scrape never times out.",
+  "author": {
+    "name": "Jesse Henson"
+  },
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "src/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/src/index.js"
+      ],
+      "env": {
+        "APIFY_TOKEN": "${user_config.apify_token}",
+        "RC_BUSINESS_NAME": "${user_config.business_name}",
+        "RC_WEBSITE": "${user_config.website}",
+        "RC_DAILY_CAP": "${user_config.daily_cap}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "find_leads",
+      "description": "Start searches and draft what to say \u2014 returns without waiting"
+    },
+    {
+      "name": "check_leads",
+      "description": "Collect searches that were still running and refresh the page"
+    },
+    {
+      "name": "import_past_runs",
+      "description": "Rebuild the store from searches already run on Apify"
+    },
+    {
+      "name": "query_leads",
+      "description": "Read-only SQL over the lead store"
+    },
+    {
+      "name": "serve_dashboard",
+      "description": "Open the dashboard on a local address that refreshes itself"
+    },
+    {
+      "name": "show_leads",
+      "description": "Show what's been found and what's still waiting"
+    },
+    {
+      "name": "mark_lead",
+      "description": "Record what happened to a lead"
+    },
+    {
+      "name": "set_territory",
+      "description": "Set the service area searches are limited to"
+    }
+  ],
+  "user_config": {
+    "apify_token": {
+      "type": "string",
+      "title": "Apify API token",
+      "description": "From apify.com \u2192 Settings \u2192 Integrations. Every search runs through this.",
+      "required": true,
+      "sensitive": true
+    },
+    "business_name": {
+      "type": "string",
+      "title": "Facebook page name",
+      "description": "Exactly as it appears when you tag it, without the @",
+      "default": "RC Pressure Washing TX",
+      "required": false
+    },
+    "website": {
+      "type": "string",
+      "title": "Website",
+      "description": "Dropped at the end of a drafted comment so people know where to go",
+      "default": "rcpressurewashingtx.com",
+      "required": false
+    },
+    "daily_cap": {
+      "type": "number",
+      "title": "Max drafted comments per day",
+      "description": "Keeps it human-scale. 10 is the default for a reason.",
+      "default": 10,
+      "min": 1,
+      "max": 40,
+      "required": false
+    }
+  },
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=22.0.0"
+    }
+  },
+  "keywords": [
+    "leads",
+    "pressure washing",
+    "facebook",
+    "local business"
+  ],
+  "license": "MIT"
+}

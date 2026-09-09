@@ -1,0 +1,10 @@
+.data/
+mock/
+test/
+transcript.txt
+spec.md
+resources.yaml
+dashboard.html
+node_modules/.package-lock.json
+fixtures/
+scripts/

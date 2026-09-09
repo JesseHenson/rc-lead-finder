@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.data/
+fixtures/
+
+# Generated artifacts at the repo root — rebuilt by
+# `node src/dashboard/render.js mock/data.json dashboard.html`.
+# Anchored, so the mock/ fixture that feeds that command is still tracked.
+/dashboard.html
+/data.json
+
+# Client working documents. Not for a public repo: the transcript is a private
+# conversation and both carry commercial terms.
+transcript.txt
+spec.md

@@ -1,0 +1,187 @@
+# Source of truth. Everything under src/ is a projection of this file.
+# Never edit a generated file to fix something — change this and rewrite it.
+
+meta:
+  name: rc-lead-finder
+  client: RC Pressure Washing TX
+  runtime: node
+  storage: sqlite            # node:sqlite, extension data dir, local only
+
+resources:
+
+  - name: ask
+    description: >
+      A public Facebook post where somebody is asking for pressure washing.
+      Track A — residential. The bundle drafts the reply; Rudy posts it.
+    fields:
+      - { name: url,           type: string,   key: true }
+      - { name: post_id,       type: string }
+      - { name: source,        type: string,   enum: [facebook] }
+      - { name: author_name,   type: string,   nullable: true }
+      - { name: author_url,    type: string,   nullable: true }
+      - { name: area,          type: string,   nullable: true }
+      - { name: posted_at,     type: datetime }
+      - { name: text,          type: string }
+      - { name: reactions,     type: number,   nullable: true }
+      - { name: matched_query, type: string }
+      - { name: service,       type: string,   nullable: true }   # what they actually asked for
+      - { name: already_tagged,type: number }                     # RC already recommended on this post
+      - { name: follow_up,     type: string,   nullable: true }   # what Rudy should do next
+      - { name: score,         type: number }
+      - { name: draft_comment, type: string,   nullable: true }
+      - { name: status,        type: string,   enum: [new, drafted, posted, skipped] }
+      - { name: touched_at,    type: datetime, nullable: true }
+      - { name: found_at,      type: datetime }
+    sources:
+      - { kind: api, tool: apify, actor: scraper_one/facebook-posts-search }
+    write_back: local
+    # status lives here only. Nothing writes back to Facebook — see spec.md,
+    # "Hard constraint". Rudy is the one who posts.
+    #
+    # already_tagged is a field, not a filter. The job description keeps posts
+    # where RC is already recommended as an optional second-touch for extra
+    # visibility, so they are kept and deprioritised rather than dropped.
+    operations:
+      - { name: sync_asks,   kind: sync,  params: [territory, days],   expose_as_tool: false, dashboard_affecting: true }
+      - { name: list_asks,   kind: read,  params: [status, limit],     expose_as_tool: false, dashboard_affecting: false }
+      - { name: mark_ask,    kind: write, params: [url, outcome],      expose_as_tool: false, dashboard_affecting: true }
+
+  - name: prospect
+    description: >
+      A freestanding small business worth a cold email. Track B — commercial.
+      Chains and large-org offshoots are filtered out at sync time.
+    fields:
+      - { name: place_id,      type: string,   key: true }
+      - { name: name,          type: string }
+      - { name: address,       type: string,   nullable: true }
+      - { name: category,      type: string,   nullable: true }
+      - { name: building,      type: string,   nullable: true }
+      - { name: website,       type: string,   nullable: true }
+      - { name: phone,         type: string,   nullable: true }
+      - { name: email,         type: string,   nullable: true }
+      - { name: contact_name,  type: string,   nullable: true }
+      - { name: contact_title, type: string,   nullable: true }
+      - { name: services,      type: string,   nullable: true }   # what this building likely needs
+      - { name: lead_score,    type: number,   nullable: true }
+      - { name: excluded,      type: string,   nullable: true }   # why it was filtered out, if it was
+      - { name: draft_email,   type: string,   nullable: true }
+      - { name: status,        type: string,   enum: [new, drafted, emailed, replied, won, skipped] }
+      - { name: touched_at,    type: datetime, nullable: true }
+      - { name: found_at,      type: datetime }
+    sources:
+      - { kind: api, tool: apify, actor: scrapesage/google-maps-scraper }
+    write_back: local
+    # Email sending is out of v1 — the bundle drafts, Rudy sends from his own
+    # mailbox. No sending credential, no CAN-SPAM surface, no domain reputation
+    # to protect. See spec.md, "Commercial track".
+    operations:
+      - { name: sync_prospects, kind: sync,  params: [territory, categories, limit], expose_as_tool: false, dashboard_affecting: true }
+      - { name: list_prospects, kind: read,  params: [status, limit],                expose_as_tool: false, dashboard_affecting: false }
+      - { name: mark_prospect,  kind: write, params: [place_id, outcome],            expose_as_tool: false, dashboard_affecting: true }
+
+  - name: run
+    description: >
+      One Apify actor run, started and left running. Claude Desktop kills a tool
+      call at ~4 minutes and Apify's run-sync endpoint 408s at 300s, so runs are
+      started asynchronously and collected by a later tool call.
+    fields:
+      - { name: id,          type: string,   key: true }     # Apify run id
+      - { name: actor,       type: string }
+      - { name: track,       type: string,   enum: [asks, commercial] }
+      - { name: query,       type: string,   nullable: true }
+      - { name: dataset_id,  type: string,   nullable: true }
+      - { name: status,      type: string }                  # Apify ActorJobStatus
+      - { name: ingested,    type: number }
+      - { name: item_count,  type: number,   nullable: true }
+      - { name: error,       type: string,   nullable: true }
+      - { name: started_at,  type: datetime }
+      - { name: finished_at, type: datetime, nullable: true }
+    sources:
+      - { kind: api, tool: apify }
+    write_back: local
+    operations:
+      - { name: start_run,     kind: write, params: [actor, track, query, input], expose_as_tool: false, dashboard_affecting: false }
+      - { name: collect_runs,  kind: sync,  params: [],                           expose_as_tool: false, dashboard_affecting: true }
+      - { name: pending_runs,  kind: read,  params: [],                           expose_as_tool: false, dashboard_affecting: false }
+
+  - name: territory
+    description: Rudy's service area. One active row; everything else is history.
+    fields:
+      - { name: name,          type: string, key: true }
+      - { name: fb_location,   type: string }          # Facebook location name or ID
+      - { name: maps_location, type: string }          # "Spring, TX" for Google Maps
+      - { name: radius_note,   type: string, nullable: true }
+      - { name: active,        type: number }
+    sources:
+      - { kind: manual }
+    write_back: local
+    operations:
+      - { name: set_territory, kind: write, params: [name, fb_location, maps_location], expose_as_tool: true, dashboard_affecting: true }
+      - { name: get_territory, kind: read,  params: [],                                 expose_as_tool: false, dashboard_affecting: false }
+
+# Coarse for Claude, fine for the dashboard. Five tools, each one something
+# Rudy would plausibly say out loud. find_leads returns inside a minute whether
+# or not the searches have finished; check_leads picks up the rest.
+tools:
+  - name: find_leads
+    calls: [sync_asks, sync_prospects]
+    params: [track, days, limit]
+    description: Find new pressure-washing leads. track = asks | commercial | both.
+    dashboard_affecting: true
+  - name: show_leads
+    calls: [list_asks, list_prospects]
+    params: [track, status, limit]
+    description: Show what's been found and what's still waiting to be acted on.
+    dashboard_affecting: false
+  - name: mark_lead
+    calls: [mark_ask, mark_prospect]
+    params: [id, outcome]
+    description: Record what happened to a lead — posted, emailed, skipped, won.
+    dashboard_affecting: true
+  - name: check_leads
+    calls: [collect_runs, pending_runs]
+    params: []
+    description: Collect any searches that were still running, and refresh the page.
+    dashboard_affecting: true
+  - name: set_territory
+    calls: [set_territory]
+    params: [name, fb_location, maps_location]
+    description: Set the service area every search is limited to.
+    dashboard_affecting: true
+
+dashboard:
+  panels:
+    - { title: Asks found today,      chart: stat,  resource: ask,      agg: "count(found_at in day)" }
+    - { title: Comments ready,        chart: stat,  resource: ask,      agg: "count(status = drafted)" }
+    - { title: Commercial prospects,  chart: stat,  resource: prospect, agg: "count(excluded is null)" }
+    - { title: Emails ready,          chart: stat,  resource: prospect, agg: "count(status = drafted)" }
+    - { title: Today's asks,          chart: table, resource: ask,      filter: "status = drafted", order: "score desc" }
+    - { title: Second-touch,          chart: stat,  resource: ask,      agg: "count(already_tagged = 1)" }
+    - { title: Commercial prospects,  chart: table, resource: prospect, filter: "status = drafted", order: "lead_score desc" }
+    - { title: This week,             chart: table, resource: ask,      filter: "found_at in week" }
+
+user_config:
+  # One required field. Every extra one is install friction.
+  - key: apify_token
+    type: string
+    title: Apify API token
+    description: From apify.com → Settings → Integrations. Every search runs through this.
+    required: true
+    sensitive: true
+  - key: business_name
+    type: string
+    title: Facebook page handle
+    default: "RC Pressure Washing TX"
+    required: false
+  - key: website
+    type: string
+    title: Website
+    default: "rcpressurewashingtx.com"
+    required: false
+  - key: daily_cap
+    type: number
+    title: Max drafted comments per day
+    default: 10
+    min: 1
+    max: 40
+    required: false
