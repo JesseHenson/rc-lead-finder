@@ -1,5 +1,5 @@
-# Source of truth. Everything under src/ is a projection of this file.
-# Never edit a generated file to fix something — change this and rewrite it.
+# 0.5 source of truth for the legacy ask / prospect / territory / run tables.
+# 0.6.0 watch tables live in src/db/schema.sql directly; this file does not describe them.
 
 meta:
   name: rc-lead-finder

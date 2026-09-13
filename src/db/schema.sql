@@ -1,5 +1,6 @@
--- Generated from resources.yaml -> resources[].fields
--- Do not edit. Change resources.yaml and rewrite this file.
+-- Legacy tables (ask, prospect, territory, run) came from resources.yaml.
+-- Watch tables (0.6.0) are defined here directly. CREATE IF NOT EXISTS only:
+-- this file runs on every open against a database that already has data.
 
 CREATE TABLE IF NOT EXISTS ask (
   url            TEXT PRIMARY KEY,
@@ -78,3 +79,94 @@ CREATE TABLE IF NOT EXISTS run (
 );
 
 CREATE INDEX IF NOT EXISTS run_pending_idx ON run (ingested, started_at);
+
+-- ---------------------------------------------------------------- 0.6.0 watch
+
+CREATE TABLE IF NOT EXISTS profile (
+  id               INTEGER PRIMARY KEY CHECK (id = 1),
+  business_name    TEXT NOT NULL,
+  owner_name       TEXT,
+  website          TEXT,
+  phone            TEXT,
+  page_handle      TEXT,
+  service_area     TEXT,
+  reply_voice      TEXT,
+  nextdoor_enabled INTEGER NOT NULL DEFAULT 1,
+  cadence          TEXT NOT NULL DEFAULT '{}',
+  signals          TEXT NOT NULL DEFAULT '[]',
+  updated_at       TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS service (
+  name     TEXT PRIMARY KEY,
+  kind     TEXT NOT NULL CHECK (kind IN ('offered','considering')),
+  keywords TEXT NOT NULL DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS source_group (
+  url           TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  privacy       TEXT,
+  members       TEXT,
+  posts_per_day REAL,
+  active        INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS search_term (
+  platform TEXT NOT NULL CHECK (platform IN ('facebook','nextdoor')),
+  term     TEXT NOT NULL,
+  purpose  TEXT NOT NULL CHECK (purpose IN ('lead','signal','competitor','opportunity')),
+  PRIMARY KEY (platform, term)
+);
+
+CREATE TABLE IF NOT EXISTS competitor (
+  name     TEXT PRIMARY KEY,
+  page_url TEXT,
+  notes    TEXT
+);
+
+CREATE TABLE IF NOT EXISTS sweep (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  mode        TEXT NOT NULL CHECK (mode IN ('daily','weekly','manual')),
+  sources     TEXT NOT NULL DEFAULT '[]',
+  since       TEXT NOT NULL,
+  searches    INTEGER NOT NULL DEFAULT 0,
+  status      TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned','done')),
+  posts_seen  INTEGER,
+  started_at  TEXT NOT NULL,
+  finished_at TEXT
+);
+
+-- content_hash is added by the migration in client.js open() for any older
+-- database whose finding table predates this column; its index is created
+-- there too, only after the column is guaranteed to exist (never here).
+CREATE TABLE IF NOT EXISTS finding (
+  key          TEXT PRIMARY KEY,
+  sweep_id     INTEGER,
+  source       TEXT NOT NULL CHECK (source IN ('facebook','nextdoor')),
+  place        TEXT,
+  author       TEXT,
+  excerpt      TEXT NOT NULL,
+  link         TEXT,
+  posted_at    TEXT,
+  posted_label TEXT,
+  kind         TEXT NOT NULL CHECK (kind IN ('lead','competitor','signal','opportunity','noise')),
+  service      TEXT,
+  topic        TEXT,
+  note         TEXT,
+  downgraded   TEXT,
+  draft_reply  TEXT,
+  content_hash TEXT,
+  status       TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','contacted','skipped','won','lost')),
+  first_seen   TEXT NOT NULL,
+  touched_at   TEXT
+);
+
+CREATE INDEX IF NOT EXISTS finding_kind_idx ON finding (kind, first_seen);
+
+CREATE TABLE IF NOT EXISTS report (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  sweep_id   INTEGER,
+  markdown   TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
