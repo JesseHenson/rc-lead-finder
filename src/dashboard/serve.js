@@ -69,7 +69,17 @@ async function boot({ buildData, port }) {
   const template = await readFile(join(HERE, "template.html"), "utf8");
   const live = template.replace("/*__DATA__*/", "/*__LIVE__*/");
 
+  const actualPort = bound.address().port;
+
   bound.on("request", async (req, res) => {
+    // A DNS-rebinding guard: this server trusts its own origin only. Without
+    // this, a malicious page in another tab could point a subdomain at
+    // 127.0.0.1 and read the owner's leads through the browser's same-origin
+    // rules for that (attacker-controlled) hostname.
+    const host = req.headers.host || "";
+    if (host !== `127.0.0.1:${actualPort}` && host !== `localhost:${actualPort}`)
+      return send(res, 403, "text/plain", "Forbidden");
+
     const path = (req.url || "/").split("?")[0];
     try {
       if (path === "/data.json") {
@@ -91,9 +101,8 @@ async function boot({ buildData, port }) {
   bound.unref?.();
 
   server = bound;
-  const actual = bound.address().port;
-  url = `http://127.0.0.1:${actual}/`;
-  return { url, port: actual, reused: false };
+  url = `http://127.0.0.1:${actualPort}/`;
+  return { url, port: actualPort, reused: false };
 }
 
 function send(res, status, type, body) {

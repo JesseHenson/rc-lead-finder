@@ -23,6 +23,19 @@ test("the server binds loopback and serves the page", async () => {
   assert.doesNotMatch(html, /"generated_at":"now"/, "served HTML must not have data baked in");
 });
 
+test("a request with a foreign Host header is refused (DNS rebinding guard)", async () => {
+  const http = await import("node:http");
+  const u = new URL(serverUrl());
+  const res = await new Promise((resolve, reject) => {
+    const req = http.request(
+      { hostname: u.hostname, port: u.port, path: "/", headers: { Host: "evil.example" } },
+      resolve);
+    req.on("error", reject);
+    req.end();
+  });
+  assert.equal(res.statusCode, 403);
+});
+
 test("data.json is rebuilt from the store on every request", async () => {
   const url = serverUrl();
   const a = await (await fetch(url + "data.json")).json();

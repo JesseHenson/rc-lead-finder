@@ -18,7 +18,7 @@ before(() => {
 
 test("no query returns the schema and row counts", () => {
   const s = schema();
-  assert.deepEqual(s.map(t => t.table).sort(), ["ask", "prospect", "run", "territory"]);
+  assert.deepEqual(s.map(t => t.table).sort(), ["ask", "competitor", "finding", "profile", "prospect", "report", "run", "search_term", "service", "source_group", "sweep", "territory"]);
   assert.equal(s.find(t => t.table === "prospect").rows, 3);
   assert.ok(s.find(t => t.table === "prospect").columns.some(c => c.startsWith("place_id")));
 });
@@ -67,4 +67,9 @@ test("a second statement smuggled in is refused", () => {
 
 test("a trailing semicolon is tolerated", () => {
   assert.equal(querySql("SELECT COUNT(*) n FROM prospect;").rows[0].n, 3);
+});
+
+test("a string limit is used, and a non-numeric limit falls back to 200 instead of throwing", () => {
+  assert.equal(querySql("SELECT 1 AS n", { limit: "5" }).row_count, 1);
+  assert.doesNotThrow(() => querySql("SELECT 1 AS n", { limit: "abc" }));
 });

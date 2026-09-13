@@ -2,6 +2,36 @@
 
 The decisions, and what each one cost. Written after the fact from what shipped.
 
+## 0.6.0: the bundle plans, Claude browses
+
+0.5 scraped public Facebook through Apify. Live tests found 84 public posts and zero
+customers, while real asks sat in Nextdoor and busy local groups that only a signed-in person
+can see. 0.6 drops scraping and uses the owner's own Chrome through Claude in Chrome.
+
+A bundle's server cannot reach Claude in Chrome, so work splits three ways:
+
+| Part | Owns |
+|---|---|
+| Bundle | Profile, sweep recipes, storage, the speaker gate, dashboard |
+| Claude | Browsing, deciding what each post is, the written report |
+| Claude Desktop scheduler | When it runs |
+
+Tools that need a browser return a script (`start_onboarding`, `plan_sweep`, `setup_schedule`);
+results come back through `save_profile`, `save_findings`, `save_report`.
+
+**The speaker gate** (`src/watch/speaker.js`) is the one place the bundle overrules Claude: a
+post Claude calls a lead is reclassified when its author is plainly advertising, hiring,
+offering to do the work, or talking shop. Claude's judgement stands otherwise.
+
+**The Facebook job** (`src/watch/facebook.js`) runs in the page as a background job because a
+single script call is cancelled at 45 seconds, and needs one real mouse move before post links
+appear. Details are in the file header.
+
+The commercial track (Google Maps prospects via Apify) is parked: `src/pipeline/prospects.js`,
+`runs.js`, `apify.js` remain but are not exposed as tools.
+
+*Everything below this line describes 0.5 and is kept as history.*
+
 ## The constraint everything follows from
 
 A `.mcpb` is **stdio only**. The manifest's `mcp_config` takes `command`, `args` and `env`;

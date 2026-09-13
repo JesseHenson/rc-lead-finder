@@ -43,7 +43,18 @@ export function open() {
   adopted = adoptLegacy(file);
   db = new DatabaseSync(file);
   db.exec(readFileSync(join(HERE, "schema.sql"), "utf8"));
+  migrate(db);
   return db;
+}
+
+// An older database's finding table predates content_hash. Add the column if
+// it's missing, then create its index — only now, so the index statement
+// never runs against a table that doesn't have the column yet.
+function migrate(d) {
+  const cols = d.prepare("PRAGMA table_info(finding)").all();
+  if (cols.length && !cols.some(c => c.name === "content_hash"))
+    d.exec("ALTER TABLE finding ADD COLUMN content_hash TEXT");
+  d.exec("CREATE INDEX IF NOT EXISTS finding_hash_idx ON finding (content_hash)");
 }
 
 export function dbPath() {
@@ -67,3 +78,18 @@ export function run(sql, params = {}) {
 }
 
 export const nowIso = () => new Date().toISOString();
+
+// All-or-nothing writes. A profile save or a findings batch that half-lands is
+// worse than one that fails loudly and can simply be sent again.
+export function tx(fn) {
+  const d = open();
+  d.exec("BEGIN");
+  try {
+    const result = fn();
+    d.exec("COMMIT");
+    return result;
+  } catch (err) {
+    d.exec("ROLLBACK");
+    throw err;
+  }
+}
